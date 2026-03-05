@@ -37,3 +37,13 @@ Le terminal affiche l'URL de téléchargement et, si `qrcode` est installé, un 
 Le fichier APK se télécharge, puis installe-le.
 
 Appuie sur `Ctrl+C` pour arrêter le serveur.
+
+### Erreur "adresse déjà utilisée"
+
+Si le port 8080 est déjà occupé, libère-le avec :
+
+```bash
+lsof -ti :8080 | xargs kill -9
+```
+
+Puis relance `python3 serve_apk.py`.
