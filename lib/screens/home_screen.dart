@@ -334,6 +334,13 @@ class _WindowRow extends StatelessWidget {
           const Spacer(),
           Row(
             children: [
+              const Icon(Icons.thermostat, size: 14, color: Color(0xFF78909C)),
+              const SizedBox(width: 2),
+              Text(
+                '${window.avgTemperature.toStringAsFixed(0)}°',
+                style: const TextStyle(color: Color(0xFF78909C), fontSize: 13),
+              ),
+              const SizedBox(width: 8),
               const Icon(Icons.air, size: 14, color: Color(0xFF78909C)),
               const SizedBox(width: 3),
               Text(

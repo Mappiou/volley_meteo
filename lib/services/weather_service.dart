@@ -18,7 +18,7 @@ class WeatherService {
   Future<ForecastData> fetchWindows() async {
     final uri = Uri.parse(
       '$_baseUrl?latitude=$_lat&longitude=$_lon'
-      '&hourly=precipitation,wind_speed_10m,cloud_cover'
+      '&hourly=precipitation,wind_speed_10m,cloud_cover,temperature_2m'
       '&daily=sunrise,sunset'
       '&timezone=Europe%2FMadrid'
       '&forecast_days=7'
@@ -47,6 +47,7 @@ class WeatherService {
     final winds = hourly['wind_speed_10m'] as List<dynamic>;
     final precips = hourly['precipitation'] as List<dynamic>;
     final clouds = hourly['cloud_cover'] as List<dynamic>;
+    final temps = hourly['temperature_2m'] as List<dynamic>;
 
     final hours = List.generate(times.length, (i) {
       final t = DateTime.parse(times[i] as String);
@@ -58,6 +59,7 @@ class WeatherService {
         windSpeed: (winds[i] as num).toDouble(),
         precipitation: (precips[i] as num).toDouble(),
         cloudCover: (clouds[i] as num).toDouble(),
+        temperature: (temps[i] as num).toDouble(),
         isDaylight: isDaylight,
       );
     });
@@ -92,6 +94,7 @@ class WeatherService {
           final avgWind = block.map((h) => h.windSpeed).reduce((a, b) => a + b) / block.length;
           final maxPrecip = block.map((h) => h.precipitation).reduce((a, b) => a > b ? a : b);
           final avgCloud = block.map((h) => h.cloudCover).reduce((a, b) => a + b) / block.length;
+          final avgTemp = block.map((h) => h.temperature).reduce((a, b) => a + b) / block.length;
 
           final window = VolleyballWindow(
             start: block.first.time,
@@ -99,6 +102,7 @@ class WeatherService {
             avgWindSpeed: avgWind,
             maxPrecipitation: maxPrecip,
             avgCloudCover: avgCloud,
+            avgTemperature: avgTemp,
           );
 
           final dayKey = DateTime(block.first.time.year, block.first.time.month, block.first.time.day);

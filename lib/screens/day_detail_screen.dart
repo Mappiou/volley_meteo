@@ -93,6 +93,20 @@ class DayDetailScreen extends StatelessWidget {
                     ),
                   ),
                 ),
+                Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.thermostat, size: 13, color: Color(0xFF78909C)),
+                      const SizedBox(width: 2),
+                      Text(
+                        '${h.temperature.toStringAsFixed(0)}°',
+                        style: const TextStyle(color: Color(0xFF78909C), fontSize: 13),
+                      ),
+                    ],
+                  ),
+                ),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   margin: const EdgeInsets.only(right: 12),

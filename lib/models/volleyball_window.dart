@@ -48,6 +48,7 @@ class VolleyballWindow {
   final double avgWindSpeed;
   final double maxPrecipitation;
   final double avgCloudCover;
+  final double avgTemperature;
 
   const VolleyballWindow({
     required this.start,
@@ -55,6 +56,7 @@ class VolleyballWindow {
     required this.avgWindSpeed,
     required this.maxPrecipitation,
     required this.avgCloudCover,
+    required this.avgTemperature,
   });
 
   Duration get duration => end.difference(start);
