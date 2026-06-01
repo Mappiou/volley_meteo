@@ -149,18 +149,23 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       return DateTime(now.year, now.month, now.day + i);
     });
 
-    return ListView.builder(
+    return SafeArea(
       key: const ValueKey('results'),
-      padding: const EdgeInsets.all(16),
-      itemCount: days.length,
-      itemBuilder: (context, index) {
-        final day = days[index];
-        return _DayCard(
-          day: day,
-          windows: forecast.windows[day] ?? [],
-          hoursByDay: forecast.hoursByDay[day] ?? [],
-        );
-      },
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(10, 6, 10, 8),
+        child: Column(
+          children: [
+            for (final day in days)
+              Expanded(
+                child: _DayCard(
+                  day: day,
+                  windows: forecast.windows[day] ?? [],
+                  hoursByDay: forecast.hoursByDay[day] ?? [],
+                ),
+              ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -238,44 +243,49 @@ class _DayCard extends StatelessWidget {
               )
           : null,
       child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
+        margin: const EdgeInsets.only(bottom: 6),
+        padding: const EdgeInsets.fromLTRB(12, 7, 10, 7),
         decoration: BoxDecoration(
           color: const Color(0xFF1A2D40),
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(12),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 14, 12, 8),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      _formatDay(day),
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    _formatDay(day),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
-                  if (hoursByDay.isNotEmpty)
-                    const Icon(Icons.chevron_right, color: Color(0xFF546E7A), size: 20),
-                ],
-              ),
-            ),
-            if (windows.isEmpty)
-              const Padding(
-                padding: EdgeInsets.fromLTRB(16, 0, 16, 14),
-                child: Text(
-                  'Pas de créneau favorable',
-                  style: TextStyle(color: Color(0xFF546E7A), fontSize: 14),
                 ),
-              )
-            else
-              ...windows.map((w) => _WindowRow(window: w, formatHour: _formatHour, formatDuration: _formatDuration)),
-            if (windows.isNotEmpty) const SizedBox(height: 6),
+                if (hoursByDay.isNotEmpty)
+                  const Icon(Icons.chevron_right, color: Color(0xFF546E7A), size: 18),
+              ],
+            ),
+            const SizedBox(height: 3),
+            Expanded(
+              child: windows.isEmpty
+                  ? const Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        'Pas de créneau favorable',
+                        style: TextStyle(color: Color(0xFF546E7A), fontSize: 12),
+                      ),
+                    )
+                  : ListView(
+                      padding: EdgeInsets.zero,
+                      physics: const ClampingScrollPhysics(),
+                      children: windows
+                          .map((w) => _WindowRow(window: w, formatHour: _formatHour, formatDuration: _formatDuration))
+                          .toList(),
+                    ),
+            ),
           ],
         ),
       ),
@@ -298,56 +308,52 @@ class _WindowRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final rating = window.rating;
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
+      padding: const EdgeInsets.symmetric(vertical: 2.5),
       child: Row(
         children: [
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
             decoration: BoxDecoration(
               color: rating.color,
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(16),
             ),
             child: Text(
               rating.label,
               style: TextStyle(
                 color: rating.textColor,
-                fontSize: 12,
+                fontSize: 10,
                 fontWeight: FontWeight.bold,
               ),
             ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 8),
           Text(
             window.skyEmoji,
-            style: const TextStyle(fontSize: 18),
+            style: const TextStyle(fontSize: 14),
+          ),
+          const SizedBox(width: 5),
+          Text(
+            '${formatHour(window.start)} – ${formatHour(window.end)}',
+            style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w500),
           ),
           const SizedBox(width: 6),
           Text(
-            '${formatHour(window.start)} – ${formatHour(window.end)}',
-            style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w500),
-          ),
-          const SizedBox(width: 8),
-          Text(
             formatDuration(window.duration),
-            style: const TextStyle(color: Color(0xFF78909C), fontSize: 13),
+            style: const TextStyle(color: Color(0xFF78909C), fontSize: 11),
           ),
           const Spacer(),
-          Row(
-            children: [
-              const Icon(Icons.thermostat, size: 14, color: Color(0xFF78909C)),
-              const SizedBox(width: 2),
-              Text(
-                '${window.avgTemperature.toStringAsFixed(0)}°',
-                style: const TextStyle(color: Color(0xFF78909C), fontSize: 13),
-              ),
-              const SizedBox(width: 8),
-              const Icon(Icons.air, size: 14, color: Color(0xFF78909C)),
-              const SizedBox(width: 3),
-              Text(
-                '${window.avgWindSpeed.toStringAsFixed(0)} km/h',
-                style: const TextStyle(color: Color(0xFF78909C), fontSize: 13),
-              ),
-            ],
+          const Icon(Icons.thermostat, size: 13, color: Color(0xFF78909C)),
+          const SizedBox(width: 1),
+          Text(
+            '${window.avgTemperature.toStringAsFixed(0)}°',
+            style: const TextStyle(color: Color(0xFF78909C), fontSize: 12),
+          ),
+          const SizedBox(width: 7),
+          const Icon(Icons.air, size: 13, color: Color(0xFF78909C)),
+          const SizedBox(width: 2),
+          Text(
+            window.avgWindSpeed.toStringAsFixed(0),
+            style: const TextStyle(color: Color(0xFF78909C), fontSize: 12),
           ),
         ],
       ),
