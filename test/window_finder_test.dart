@@ -21,51 +21,65 @@ HourlyWeather hw(int hour,
 DateTime get day => DateTime(2026, 6, 1);
 
 void main() {
-  test('3 heures toutes parfaites -> un créneau parfait de 3h', () {
-    final res = findWindows([hw(10, wind: 2), hw(11, wind: 3), hw(12, wind: 4)]);
+  test('un seul créneau par jour : le matin calme, pas tout le bloc', () {
+    final res = findWindows([
+      hw(7, wind: 3), hw(8, wind: 3), hw(9, wind: 4),
+      hw(10, wind: 8), hw(11, wind: 9),
+      hw(12, wind: 12), hw(13, wind: 13), hw(14, wind: 13),
+    ]);
     final windows = res[day]!;
     expect(windows.length, 1);
-    expect(windows.first.isPerfect, true);
     expect(windows.first.rating, VolleyRating.parfait);
-    expect(windows.first.start.hour, 10);
-    expect(windows.first.end.hour, 13);
+    expect(windows.first.start.hour, 7);
+    expect(windows.first.end.hour, 10);
   });
 
-  test('une heure parfaite isolée dans un bloc reste non-parfaite', () {
-    final res = findWindows([hw(10, wind: 2), hw(11, wind: 8), hw(12, wind: 8)]);
+  test('pas de calme < 5 : on prend le meilleur tier disponible', () {
+    final res = findWindows([hw(8, wind: 8), hw(9, wind: 8), hw(10, wind: 8)]);
     final windows = res[day]!;
     expect(windows.length, 1);
-    expect(windows.first.isPerfect, false);
+    expect(windows.first.rating, VolleyRating.tresBien);
+    expect(windows.first.start.hour, 8);
+    expect(windows.first.end.hour, 11);
   });
 
-  test('parfait puis venteux -> deux créneaux adjacents sans chevauchement', () {
+  test('un calme de 2h est préféré à un long créneau plus venteux', () {
     final res = findWindows([
-      hw(10, wind: 2), hw(11, wind: 2), hw(12, wind: 2),
-      hw(13, wind: 8), hw(14, wind: 8), hw(15, wind: 8),
+      hw(7, wind: 3), hw(8, wind: 3),
+      hw(9, wind: 8), hw(10, wind: 8), hw(11, wind: 8), hw(12, wind: 8),
     ]);
     final windows = res[day]!;
-    expect(windows.length, 2);
-    expect(windows[0].isPerfect, true);
-    expect(windows[1].isPerfect, false);
-    expect(windows[0].end, windows[1].start);
+    expect(windows.length, 1);
+    expect(windows.first.rating, VolleyRating.parfait);
+    expect(windows.first.start.hour, 7);
+    expect(windows.first.end.hour, 9);
   });
 
-  test('un créneau parfait plus tard est trié avant un non-parfait plus tôt', () {
+  test('durée variable : le calme s\'étend tant que le vent reste bas', () {
     final res = findWindows([
-      hw(8, wind: 8), hw(9, wind: 8),
-      hw(10, wind: 50),
-      hw(11, wind: 2), hw(12, wind: 2), hw(13, wind: 2),
+      hw(7, wind: 3), hw(8, wind: 3), hw(9, wind: 3),
+      hw(10, wind: 4), hw(11, wind: 4),
     ]);
     final windows = res[day]!;
-    expect(windows.length, 2);
-    expect(windows[0].isPerfect, true);
-    expect(windows[0].start.hour, 11);
-    expect(windows[1].isPerfect, false);
-    expect(windows[1].start.hour, 8);
+    expect(windows.length, 1);
+    expect(windows.first.start.hour, 7);
+    expect(windows.first.end.hour, 12);
   });
 
-  test('bloc de moins de 2h ignoré', () {
-    final res = findWindows([hw(10, wind: 2)]);
+  test('un bloc de moins de 2h ne donne aucun créneau', () {
+    final res = findWindows([hw(7, wind: 3)]);
     expect(res.isEmpty, true);
+  });
+
+  test('la pluie et la nuit cassent les blocs', () {
+    final res = findWindows([
+      hw(7, wind: 3, precip: 1),
+      hw(8, wind: 3, daylight: false),
+      hw(9, wind: 3), hw(10, wind: 3),
+    ]);
+    final windows = res[day]!;
+    expect(windows.length, 1);
+    expect(windows.first.start.hour, 9);
+    expect(windows.first.end.hour, 11);
   });
 }

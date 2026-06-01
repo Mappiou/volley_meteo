@@ -46,27 +46,27 @@ class VolleyballWindow {
   final DateTime start;
   final DateTime end;
   final double avgWindSpeed;
+  final double maxWindSpeed;
   final double maxPrecipitation;
   final double avgCloudCover;
   final double avgTemperature;
-  final bool isPerfect;
 
   const VolleyballWindow({
     required this.start,
     required this.end,
     required this.avgWindSpeed,
+    required this.maxWindSpeed,
     required this.maxPrecipitation,
     required this.avgCloudCover,
     required this.avgTemperature,
-    this.isPerfect = false,
   });
 
   Duration get duration => end.difference(start);
 
   VolleyRating get rating {
-    if (isPerfect) return VolleyRating.parfait;
-    if (avgWindSpeed < 5) return VolleyRating.tresBien;
-    if (avgWindSpeed < 10) return VolleyRating.bien;
+    if (maxWindSpeed < 5) return VolleyRating.parfait;
+    if (maxWindSpeed < 10) return VolleyRating.tresBien;
+    if (maxWindSpeed < 15) return VolleyRating.bien;
     return VolleyRating.jouable;
   }
 

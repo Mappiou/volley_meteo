@@ -17,22 +17,28 @@ jour (heure par heure) reste inchangé.
   heure moins bonne diluée dans la moyenne.
 - Le clic sur un jour ouvre `day_detail_screen.dart` : vue heure par heure.
 
-## Comportement cible
+## Comportement cible (révisé)
+
+> Révision après test terrain : l'accueil ne montre plus une liste de créneaux
+> moyennés (qui affichait p.ex. « 07h–15h Bien » en noyant la fin venteuse).
+> Objectif réel : savoir d'un coup d'œil **quand aller au beach**.
 
 ### Page d'accueil — le seul écran modifié
 
-1. **Définition stricte d'un créneau parfait** : suite continue d'heures où
-   **chaque heure** est parfaite — `windSpeed < 5`, ciel dégagé
-   (`cloudCover < 40`), en journée (`isDaylight`), sans pluie
-   (`precipitation == 0`) — d'une durée **≥ 2h**.
-2. **Priorité visuelle** : pour **chacun des 7 jours**, les créneaux parfaits
-   sont listés **en tête** de la carte du jour, suivis des autres créneaux
-   (Très bien / Bien / Jouable). Rien n'est masqué.
-3. **Pas de doublon horaire** : un créneau parfait strict est souvent un
-   sous-ensemble d'un bloc jouable plus large. Le découpage doit éviter qu'un
-   même horaire apparaisse deux fois. Règle : on extrait d'abord les segments
-   parfaits stricts (≥ 2h) ; les heures jouables **restantes** autour forment
-   les créneaux non-parfaits (eux aussi ≥ 2h pour rester affichables).
+1. **Un seul créneau par jour : le meilleur.** Pour chacun des 7 jours, on
+   affiche uniquement le meilleur créneau (ou « Pas de créneau favorable » si
+   aucune plage jouable ≥ 2h).
+2. **Vent faible avant tout.** On classe les heures en paliers de vent :
+   `< 5` (parfait), `< 10`, `< 15` (jouable). Le meilleur créneau est le segment
+   continu du **palier le plus calme** disponible ce jour-là qui dure **≥ 2h**.
+   On préfère donc un créneau calme de 2h à un long créneau plus venteux.
+3. **Durée variable.** Le créneau s'étend tant que le vent reste dans le même
+   palier (de 2h à toute la matinée selon la météo).
+4. **Note honnête (pas de moyenne trompeuse).** La note (`Parfait` / `Très bien`
+   / `Bien`) dépend du **vent maximum** du créneau, pas de la moyenne : toutes
+   les heures du créneau respectent donc le seuil annoncé.
+5. Contraintes communes : en journée (`isDaylight`), sans pluie
+   (`precipitation == 0`). La pluie et la nuit coupent les segments.
 
 ### Détail du jour — inchangé
 

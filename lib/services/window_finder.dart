@@ -1,101 +1,102 @@
 import '../models/hourly_weather.dart';
 import '../models/volleyball_window.dart';
 
-const _perfectWindKmh = 5.0;
-const _perfectCloudPct = 40.0;
 const _minWindowHours = 2;
 
-bool _isPerfectHour(HourlyWeather h) =>
-    h.isDaylight &&
-    h.precipitation == 0 &&
-    h.windSpeed < _perfectWindKmh &&
-    h.cloudCover < _perfectCloudPct;
+int _windTier(double wind) {
+  if (wind < 5) return 0;
+  if (wind < 10) return 1;
+  return 2;
+}
 
-VolleyballWindow _buildWindow(List<HourlyWeather> block, bool isPerfect) {
-  final avgWind =
-      block.map((h) => h.windSpeed).reduce((a, b) => a + b) / block.length;
+double _avgWind(List<HourlyWeather> seg) =>
+    seg.map((h) => h.windSpeed).reduce((a, b) => a + b) / seg.length;
+
+VolleyballWindow _buildWindow(List<HourlyWeather> seg) {
+  final maxWind = seg.map((h) => h.windSpeed).reduce((a, b) => a > b ? a : b);
   final maxPrecip =
-      block.map((h) => h.precipitation).reduce((a, b) => a > b ? a : b);
+      seg.map((h) => h.precipitation).reduce((a, b) => a > b ? a : b);
   final avgCloud =
-      block.map((h) => h.cloudCover).reduce((a, b) => a + b) / block.length;
+      seg.map((h) => h.cloudCover).reduce((a, b) => a + b) / seg.length;
   final avgTemp =
-      block.map((h) => h.temperature).reduce((a, b) => a + b) / block.length;
+      seg.map((h) => h.temperature).reduce((a, b) => a + b) / seg.length;
   return VolleyballWindow(
-    start: block.first.time,
-    end: block.last.time.add(const Duration(hours: 1)),
-    avgWindSpeed: avgWind,
+    start: seg.first.time,
+    end: seg.last.time.add(const Duration(hours: 1)),
+    avgWindSpeed: _avgWind(seg),
+    maxWindSpeed: maxWind,
     maxPrecipitation: maxPrecip,
     avgCloudCover: avgCloud,
     avgTemperature: avgTemp,
-    isPerfect: isPerfect,
   );
 }
 
-void _splitBlock(List<HourlyWeather> block, List<VolleyballWindow> out) {
-  final n = block.length;
-  final inPerfect = List<bool>.filled(n, false);
+bool _isBetter(List<HourlyWeather> candidate, List<HourlyWeather> current) {
+  if (candidate.length != current.length) {
+    return candidate.length > current.length;
+  }
+  final ca = _avgWind(candidate);
+  final cu = _avgWind(current);
+  if (ca != cu) return ca < cu;
+  return candidate.first.time.isBefore(current.first.time);
+}
 
-  int i = 0;
-  while (i < n) {
-    if (_isPerfectHour(block[i])) {
-      int j = i;
-      while (j < n && _isPerfectHour(block[j])) {
-        j++;
-      }
-      if (j - i >= _minWindowHours) {
-        for (int k = i; k < j; k++) {
-          inPerfect[k] = true;
+List<HourlyWeather>? _bestRunAtTier(
+    List<List<HourlyWeather>> blocks, int tier) {
+  List<HourlyWeather>? best;
+  for (final block in blocks) {
+    final n = block.length;
+    int i = 0;
+    while (i < n) {
+      if (_windTier(block[i].windSpeed) <= tier) {
+        int j = i;
+        while (j < n && _windTier(block[j].windSpeed) <= tier) {
+          j++;
         }
-        out.add(_buildWindow(block.sublist(i, j), true));
+        if (j - i >= _minWindowHours) {
+          final run = block.sublist(i, j);
+          if (best == null || _isBetter(run, best)) best = run;
+        }
+        i = j;
+      } else {
+        i++;
       }
-      i = j;
-    } else {
-      i++;
     }
   }
-
-  int segStart = -1;
-  for (int k = 0; k <= n; k++) {
-    final leftover = k < n && !inPerfect[k];
-    if (leftover) {
-      if (segStart < 0) segStart = k;
-    } else if (segStart >= 0) {
-      if (k - segStart >= _minWindowHours) {
-        out.add(_buildWindow(block.sublist(segStart, k), false));
-      }
-      segStart = -1;
-    }
-  }
+  return best;
 }
 
 Map<DateTime, List<VolleyballWindow>> findWindows(List<HourlyWeather> hours) {
-  final blocks = <List<HourlyWeather>>[];
+  final blocksByDay = <DateTime, List<List<HourlyWeather>>>{};
   List<HourlyWeather>? current;
-  for (final h in hours) {
-    if (h.isPlayable && h.isDaylight) {
-      (current ??= []).add(h);
-    } else if (current != null) {
-      blocks.add(current);
+
+  void flush() {
+    if (current != null) {
+      final d = current!.first.time;
+      final key = DateTime(d.year, d.month, d.day);
+      blocksByDay.putIfAbsent(key, () => []).add(current!);
       current = null;
     }
   }
-  if (current != null) blocks.add(current);
 
-  final flat = <VolleyballWindow>[];
-  for (final block in blocks) {
-    _splitBlock(block, flat);
+  for (final h in hours) {
+    if (h.isPlayable && h.isDaylight) {
+      (current ??= []).add(h);
+    } else {
+      flush();
+    }
   }
+  flush();
 
   final result = <DateTime, List<VolleyballWindow>>{};
-  for (final w in flat) {
-    final dayKey = DateTime(w.start.year, w.start.month, w.start.day);
-    result.putIfAbsent(dayKey, () => []).add(w);
-  }
-  for (final list in result.values) {
-    list.sort((a, b) {
-      if (a.isPerfect != b.isPerfect) return a.isPerfect ? -1 : 1;
-      return a.start.compareTo(b.start);
-    });
-  }
+  blocksByDay.forEach((day, blocks) {
+    for (int tier = 0; tier <= 2; tier++) {
+      final run = _bestRunAtTier(blocks, tier);
+      if (run != null) {
+        result[day] = [_buildWindow(run)];
+        break;
+      }
+    }
+  });
   return result;
 }
