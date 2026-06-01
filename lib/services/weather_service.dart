@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../models/hourly_weather.dart';
 import '../models/volleyball_window.dart';
+import 'window_finder.dart';
 
 class ForecastData {
   final Map<DateTime, List<VolleyballWindow>> windows;
@@ -73,45 +74,8 @@ class WeatherService {
     }
 
     return ForecastData(
-      windows: _findWindows(hours),
+      windows: findWindows(hours),
       hoursByDay: hoursByDay,
     );
-  }
-
-  Map<DateTime, List<VolleyballWindow>> _findWindows(List<HourlyWeather> hours) {
-    final result = <DateTime, List<VolleyballWindow>>{};
-    int? blockStart;
-
-    for (int i = 0; i <= hours.length; i++) {
-      final isGood = i < hours.length && hours[i].isPlayable && hours[i].isDaylight;
-
-      if (isGood) {
-        blockStart ??= i;
-      } else if (blockStart != null) {
-        final blockLen = i - blockStart;
-        if (blockLen >= 2) {
-          final block = hours.sublist(blockStart, i);
-          final avgWind = block.map((h) => h.windSpeed).reduce((a, b) => a + b) / block.length;
-          final maxPrecip = block.map((h) => h.precipitation).reduce((a, b) => a > b ? a : b);
-          final avgCloud = block.map((h) => h.cloudCover).reduce((a, b) => a + b) / block.length;
-          final avgTemp = block.map((h) => h.temperature).reduce((a, b) => a + b) / block.length;
-
-          final window = VolleyballWindow(
-            start: block.first.time,
-            end: block.last.time.add(const Duration(hours: 1)),
-            avgWindSpeed: avgWind,
-            maxPrecipitation: maxPrecip,
-            avgCloudCover: avgCloud,
-            avgTemperature: avgTemp,
-          );
-
-          final dayKey = DateTime(block.first.time.year, block.first.time.month, block.first.time.day);
-          result.putIfAbsent(dayKey, () => []).add(window);
-        }
-        blockStart = null;
-      }
-    }
-
-    return result;
   }
 }
